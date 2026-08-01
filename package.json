@@ -1,0 +1,13 @@
+{
+  "name": "dpmm-membership-portal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.1",
+    "express": "^4.21.2"
+  }
+}

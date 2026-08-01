@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import CSV</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+  <div class="max-w-3xl mx-auto bg-white rounded-xl shadow p-8">
+    <h1 class="text-2xl font-bold mb-4">Upload Member CSV</h1>
+    <p class="text-gray-600 mb-6">Paste the CSV content below and import it into the Neon members table.</p>
+
+    <div class="mb-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+      <label for="csvFile" class="block text-sm font-semibold text-gray-700 mb-2">Choose CSV file</label>
+      <input id="csvFile" type="file" accept=".csv,text/csv" class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-semibold hover:file:bg-blue-700" />
+      <p class="mt-2 text-xs text-gray-500">You can upload a .csv file directly from your computer.</p>
+    </div>
+
+    <textarea id="csvInput" rows="12" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm" placeholder="Or paste CSV content here..."></textarea>
+
+    <div class="mt-4 flex flex-wrap gap-3">
+      <button onclick="importCsv()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Import CSV</button>
+      <a href="/" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Back to Portal</a>
+    </div>
+
+    <div id="result" class="mt-6 text-sm text-gray-700"></div>
+  </div>
+
+  <script>
+    async function importCsv() {
+      const csvFile = document.getElementById('csvFile').files[0];
+      const csvInput = document.getElementById('csvInput');
+      const result = document.getElementById('result');
+      result.textContent = 'Importing...';
+
+      try {
+        let csv = csvInput.value.trim();
+
+        if (csvFile) {
+          const text = await csvFile.text();
+          csv = text;
+          csvInput.value = text;
+        }
+
+        const response = await fetch('/api/import-csv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ csv })
+        });
+
+        const data = await response.json();
+        result.textContent = data.success ? `Imported ${data.inserted} rows successfully.` : `Error: ${data.error}`;
+      } catch (error) {
+        result.textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
