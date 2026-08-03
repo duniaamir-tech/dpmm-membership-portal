@@ -26,32 +26,33 @@ app.post('/api/members', async (req, res) => {
 
     const sql = neon(connectionString);
 
-    // Helper table creation to align strictly with database schema
+    // Helper table creation aligned strictly with your database schema
     const ensureTableExists = async () => {
       await sql`
         CREATE TABLE IF NOT EXISTS members (
           id SERIAL PRIMARY KEY,
-          no_ahli TEXT,
-          syarikat TEXT,
-          ssm_no TEXT,
-          tmph_ssm TEXT,
-          proksi TEXT,
-          no_kp TEXT,
-          introducer TEXT,
-          email TEXT,
-          hphone TEXT,
-          pegawai_hubungi TEXT,
-          tel_pejabat TEXT,
-          whatsapp TEXT,
-          tahun TEXT,
-          kategori TEXT,
+          no_ahli VARCHAR,
+          ssm_no VARCHAR,
+          tmph_ssm VARCHAR,
+          tahun VARCHAR,
+          syarikat VARCHAR,
+          proksi VARCHAR,
+          no_kp VARCHAR,
+          introducer VARCHAR,
+          email VARCHAR,
+          hphone VARCHAR,
+          pegawai_hubungi VARCHAR,
+          tel_pejabat VARCHAR,
+          kategori VARCHAR,
           jenis_perniagaan TEXT,
-          no_resit TEXT,
+          no_resit VARCHAR,
           tarikh_bayar TEXT,
-          status TEXT,
+          tahun_bayar INTEGER,
+          status VARCHAR,
           alamat_surat_menyurat TEXT,
           alamat_tetap TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         )
       `;
     };
@@ -62,14 +63,15 @@ app.post('/api/members', async (req, res) => {
       await sql`
         INSERT INTO members (
           no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer,
-          email, hphone, pegawai_hubungi, tel_pejabat, whatsapp, tahun, kategori,
-          jenis_perniagaan, no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
+          email, hphone, pegawai_hubungi, tel_pejabat, tahun, kategori,
+          jenis_perniagaan, no_resit, tarikh_bayar, tahun_bayar, status,
+          alamat_surat_menyurat, alamat_tetap
         ) VALUES (
-          ${data?.no_ahli || ''}, ${data?.syarikat || ''}, ${data?.ssm_no || ''}, ${data?.tmph_ssm || ''}, ${data?.proksi || ''},
-          ${data?.no_kp || ''}, ${data?.introducer || ''}, ${data?.email || ''}, ${data?.hphone || ''}, ${data?.pegawai_hubungi || ''},
-          ${data?.tel_pejabat || ''}, ${data?.whatsapp || ''}, ${data?.tahun || ''}, ${data?.kategori || ''},
-          ${data?.jenis_perniagaan || ''}, ${data?.no_resit || ''}, ${data?.tarikh_bayar || ''}, ${data?.status || ''},
-          ${data?.alamat_surat_menyurat || ''}, ${data?.alamat_tetap || ''}
+          ${data?.no_ahli || null}, ${data?.syarikat || null}, ${data?.ssm_no || null}, ${data?.tmph_ssm || null}, ${data?.proksi || null},
+          ${data?.no_kp || null}, ${data?.introducer || null}, ${data?.email || null}, ${data?.hphone || null}, ${data?.pegawai_hubungi || null},
+          ${data?.tel_pejabat || null}, ${data?.tahun || null}, ${data?.kategori || null},
+          ${data?.jenis_perniagaan || null}, ${data?.no_resit || null}, ${data?.tarikh_bayar || null}, ${data?.tahun_bayar || null}, ${data?.status || null},
+          ${data?.alamat_surat_menyurat || null}, ${data?.alamat_tetap || null}
         )
       `;
 
@@ -111,24 +113,25 @@ app.post('/api/members', async (req, res) => {
 
       await sql`
         UPDATE members
-        SET syarikat = ${data?.syarikat || ''},
-            ssm_no = ${data?.ssm_no || ''},
-            tmph_ssm = ${data?.tmph_ssm || ''},
-            proksi = ${data?.proksi || ''},
-            no_kp = ${data?.no_kp || ''},
-            introducer = ${data?.introducer || ''},
-            hphone = ${data?.hphone || ''},
-            pegawai_hubungi = ${data?.pegawai_hubungi || ''},
-            tel_pejabat = ${data?.tel_pejabat || ''},
-            whatsapp = ${data?.whatsapp || ''},
-            tahun = ${data?.tahun || ''},
-            kategori = ${data?.kategori || ''},
-            jenis_perniagaan = ${data?.jenis_perniagaan || ''},
-            no_resit = ${data?.no_resit || ''},
-            tarikh_bayar = ${data?.tarikh_bayar || ''},
-            status = ${data?.status || ''},
-            alamat_surat_menyurat = ${data?.alamat_surat_menyurat || ''},
-            alamat_tetap = ${data?.alamat_tetap || ''}
+        SET syarikat = ${data?.syarikat || null},
+            ssm_no = ${data?.ssm_no || null},
+            tmph_ssm = ${data?.tmph_ssm || null},
+            proksi = ${data?.proksi || null},
+            no_kp = ${data?.no_kp || null},
+            introducer = ${data?.introducer || null},
+            hphone = ${data?.hphone || null},
+            pegawai_hubungi = ${data?.pegawai_hubungi || null},
+            tel_pejabat = ${data?.tel_pejabat || null},
+            tahun = ${data?.tahun || null},
+            kategori = ${data?.kategori || null},
+            jenis_perniagaan = ${data?.jenis_perniagaan || null},
+            no_resit = ${data?.no_resit || null},
+            tarikh_bayar = ${data?.tarikh_bayar || null},
+            tahun_bayar = ${data?.tahun_bayar || null},
+            status = ${data?.status || null},
+            alamat_surat_menyurat = ${data?.alamat_surat_menyurat || null},
+            alamat_tetap = ${data?.alamat_tetap || null},
+            updated_at = NOW()
         WHERE email = ${data?.email || ''}
       `;
 
