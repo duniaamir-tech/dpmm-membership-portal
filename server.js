@@ -26,20 +26,21 @@ app.post('/api/members', async (req, res) => {
 
     const sql = neon(connectionString);
 
-    if (action === 'register') {
+    // Helper table creation to align strictly with database schema
+    const ensureTableExists = async () => {
       await sql`
         CREATE TABLE IF NOT EXISTS members (
           id SERIAL PRIMARY KEY,
           no_ahli TEXT,
           syarikat TEXT,
-          ssm TEXT,
+          ssm_no TEXT,
           tmph_ssm TEXT,
           proksi TEXT,
-          kp TEXT,
+          no_kp TEXT,
           introducer TEXT,
           email TEXT,
-          phone TEXT,
-          pegawai TEXT,
+          hphone TEXT,
+          pegawai_hubungi TEXT,
           tel_pejabat TEXT,
           whatsapp TEXT,
           tahun TEXT,
@@ -48,23 +49,27 @@ app.post('/api/members', async (req, res) => {
           no_resit TEXT,
           tarikh_bayar TEXT,
           status TEXT,
-          surat TEXT,
-          alamat TEXT,
+          alamat_surat_menyurat TEXT,
+          alamat_tetap TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
+    };
+
+    if (action === 'register') {
+      await ensureTableExists();
 
       await sql`
         INSERT INTO members (
-          no_ahli, syarikat, ssm, tmph_ssm, proksi, kp, introducer,
-          email, phone, pegawai, tel_pejabat, whatsapp, tahun, kategori,
-          jenis_perniagaan, no_resit, tarikh_bayar, status, surat, alamat
+          no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer,
+          email, hphone, pegawai_hubungi, tel_pejabat, whatsapp, tahun, kategori,
+          jenis_perniagaan, no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
         ) VALUES (
-          ${data?.noAhli || ''}, ${data?.syarikat || ''}, ${data?.ssm || ''}, ${data?.tmphSsm || ''}, ${data?.proksi || ''},
-          ${data?.kp || ''}, ${data?.introducer || ''}, ${data?.email || ''}, ${data?.phone || ''}, ${data?.pegawai || ''},
-          ${data?.telPejabat || ''}, ${data?.whatsapp || ''}, ${data?.tahun || ''}, ${data?.kategori || ''},
-          ${data?.jenisPerniagaan || ''}, ${data?.noResit || ''}, ${data?.tarikhBayar || ''}, ${data?.status || ''},
-          ${data?.surat || ''}, ${data?.alamat || ''}
+          ${data?.no_ahli || ''}, ${data?.syarikat || ''}, ${data?.ssm_no || ''}, ${data?.tmph_ssm || ''}, ${data?.proksi || ''},
+          ${data?.no_kp || ''}, ${data?.introducer || ''}, ${data?.email || ''}, ${data?.hphone || ''}, ${data?.pegawai_hubungi || ''},
+          ${data?.tel_pejabat || ''}, ${data?.whatsapp || ''}, ${data?.tahun || ''}, ${data?.kategori || ''},
+          ${data?.jenis_perniagaan || ''}, ${data?.no_resit || ''}, ${data?.tarikh_bayar || ''}, ${data?.status || ''},
+          ${data?.alamat_surat_menyurat || ''}, ${data?.alamat_tetap || ''}
         )
       `;
 
@@ -72,32 +77,7 @@ app.post('/api/members', async (req, res) => {
     }
 
     if (action === 'search') {
-      await sql`
-        CREATE TABLE IF NOT EXISTS members (
-          id SERIAL PRIMARY KEY,
-          no_ahli TEXT,
-          syarikat TEXT,
-          ssm TEXT,
-          tmph_ssm TEXT,
-          proksi TEXT,
-          kp TEXT,
-          introducer TEXT,
-          email TEXT,
-          phone TEXT,
-          pegawai TEXT,
-          tel_pejabat TEXT,
-          whatsapp TEXT,
-          tahun TEXT,
-          kategori TEXT,
-          jenis_perniagaan TEXT,
-          no_resit TEXT,
-          tarikh_bayar TEXT,
-          status TEXT,
-          surat TEXT,
-          alamat TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+      await ensureTableExists();
 
       const query = data?.query || '';
       const rows = await sql`
@@ -114,32 +94,7 @@ app.post('/api/members', async (req, res) => {
     }
 
     if (action === 'list') {
-      await sql`
-        CREATE TABLE IF NOT EXISTS members (
-          id SERIAL PRIMARY KEY,
-          no_ahli TEXT,
-          syarikat TEXT,
-          ssm TEXT,
-          tmph_ssm TEXT,
-          proksi TEXT,
-          kp TEXT,
-          introducer TEXT,
-          email TEXT,
-          phone TEXT,
-          pegawai TEXT,
-          tel_pejabat TEXT,
-          whatsapp TEXT,
-          tahun TEXT,
-          kategori TEXT,
-          jenis_perniagaan TEXT,
-          no_resit TEXT,
-          tarikh_bayar TEXT,
-          status TEXT,
-          surat TEXT,
-          alamat TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+      await ensureTableExists();
 
       const rows = await sql`
         SELECT id, no_ahli, syarikat, proksi, email, status, created_at
@@ -152,53 +107,28 @@ app.post('/api/members', async (req, res) => {
     }
 
     if (action === 'update') {
-      await sql`
-        CREATE TABLE IF NOT EXISTS members (
-          id SERIAL PRIMARY KEY,
-          no_ahli TEXT,
-          syarikat TEXT,
-          ssm TEXT,
-          tmph_ssm TEXT,
-          proksi TEXT,
-          kp TEXT,
-          introducer TEXT,
-          email TEXT,
-          phone TEXT,
-          pegawai TEXT,
-          tel_pejabat TEXT,
-          whatsapp TEXT,
-          tahun TEXT,
-          kategori TEXT,
-          jenis_perniagaan TEXT,
-          no_resit TEXT,
-          tarikh_bayar TEXT,
-          status TEXT,
-          surat TEXT,
-          alamat TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+      await ensureTableExists();
 
       await sql`
         UPDATE members
         SET syarikat = ${data?.syarikat || ''},
-            ssm = ${data?.ssm || ''},
-            tmph_ssm = ${data?.tmphSsm || ''},
+            ssm_no = ${data?.ssm_no || ''},
+            tmph_ssm = ${data?.tmph_ssm || ''},
             proksi = ${data?.proksi || ''},
-            kp = ${data?.kp || ''},
+            no_kp = ${data?.no_kp || ''},
             introducer = ${data?.introducer || ''},
-            phone = ${data?.phone || ''},
-            pegawai = ${data?.pegawai || ''},
-            tel_pejabat = ${data?.telPejabat || ''},
+            hphone = ${data?.hphone || ''},
+            pegawai_hubungi = ${data?.pegawai_hubungi || ''},
+            tel_pejabat = ${data?.tel_pejabat || ''},
             whatsapp = ${data?.whatsapp || ''},
             tahun = ${data?.tahun || ''},
             kategori = ${data?.kategori || ''},
-            jenis_perniagaan = ${data?.jenisPerniagaan || ''},
-            no_resit = ${data?.noResit || ''},
-            tarikh_bayar = ${data?.tarikhBayar || ''},
+            jenis_perniagaan = ${data?.jenis_perniagaan || ''},
+            no_resit = ${data?.no_resit || ''},
+            tarikh_bayar = ${data?.tarikh_bayar || ''},
             status = ${data?.status || ''},
-            surat = ${data?.surat || ''},
-            alamat = ${data?.alamat || ''}
+            alamat_surat_menyurat = ${data?.alamat_surat_menyurat || ''},
+            alamat_tetap = ${data?.alamat_tetap || ''}
         WHERE email = ${data?.email || ''}
       `;
 
