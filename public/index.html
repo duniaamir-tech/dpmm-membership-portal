@@ -371,26 +371,26 @@
             submitBtn.innerText = 'Processing Submission...';
 
             const newMember = {
-                noAhli: document.getElementById('reg-no-ahli').value.trim(),
+                no_ahli: document.getElementById('reg-no-ahli').value.trim(),
                 syarikat: document.getElementById('reg-syarikat').value.trim(),
-                ssm: document.getElementById('reg-ssm').value.trim(),
-                tmphSsm: document.getElementById('reg-tmph-ssm').value.trim(),
+                ssm_no: document.getElementById('reg-ssm').value.trim(),
+                tmph_ssm: document.getElementById('reg-tmph-ssm').value.trim(),
                 proksi: document.getElementById('reg-proksi').value.trim(),
-                kp: document.getElementById('reg-kp').value.trim(),
+                no_kp: document.getElementById('reg-kp').value.trim(),
                 introducer: document.getElementById('reg-introducer').value.trim(),
                 email: document.getElementById('reg-email').value.trim().toLowerCase(),
-                phone: document.getElementById('reg-phone').value.trim(),
-                pegawai: document.getElementById('reg-pegawai').value.trim(),
-                telPejabat: document.getElementById('reg-tel-pejabat').value.trim(),
+                hphone: document.getElementById('reg-phone').value.trim(),
+                pegawai_hubungi: document.getElementById('reg-pegawai').value.trim(),
+                tel_pejabat: document.getElementById('reg-tel-pejabat').value.trim(),
                 whatsapp: document.getElementById('reg-whatsapp').value,
                 tahun: document.getElementById('reg-tahun').value,
                 kategori: document.getElementById('reg-kategori').value.trim(),
-                jenisPerniagaan: document.getElementById('reg-jenis-perniagaan').value.trim(),
-                noResit: document.getElementById('reg-no-resit').value.trim(),
-                tarikhBayar: document.getElementById('reg-tarikh-bayar').value,
+                jenis_perniagaan: document.getElementById('reg-jenis-perniagaan').value.trim(),
+                no_resit: document.getElementById('reg-no-resit').value.trim(),
+                tarikh_bayar: document.getElementById('reg-tarikh-bayar').value,
                 status: document.getElementById('reg-status').value,
-                surat: document.getElementById('reg-surat').value.trim(),
-                alamat: document.getElementById('reg-alamat').value.trim()
+                alamat_surat_menyurat: document.getElementById('reg-surat').value.trim(),
+                alamat_tetap: document.getElementById('reg-alamat').value.trim()
             };
 
             const response = await queryBackend('register', newMember);
@@ -437,14 +437,14 @@
 
                 document.getElementById('display-id').innerText = `No. Ahli: ${member.no_ahli || ''}`;
                 document.getElementById('edit-syarikat').value = member.syarikat || '';
-                document.getElementById('edit-ssm').value = member.ssm || '';
+                document.getElementById('edit-ssm').value = member.ssm_no || '';
                 document.getElementById('edit-tmph-ssm').value = member.tmph_ssm || '';
                 document.getElementById('edit-proksi').value = member.proksi || '';
-                document.getElementById('edit-kp').value = member.kp || '';
+                document.getElementById('edit-kp').value = member.no_kp || '';
                 document.getElementById('edit-introducer').value = member.introducer || '';
                 document.getElementById('edit-email').value = member.email || '';
-                document.getElementById('edit-phone').value = member.phone || '';
-                document.getElementById('edit-pegawai').value = member.pegawai || '';
+                document.getElementById('edit-phone').value = member.hphone || '';
+                document.getElementById('edit-pegawai').value = member.pegawai_hubungi || '';
                 document.getElementById('edit-tel-pejabat').value = member.tel_pejabat || '';
                 document.getElementById('edit-whatsapp').value = member.whatsapp || 'Ada';
                 document.getElementById('edit-tahun').value = member.tahun || '2026';
@@ -453,8 +453,8 @@
                 document.getElementById('edit-no-resit').value = member.no_resit || '';
                 document.getElementById('edit-tarikh-bayar').value = member.tarikh_bayar || '';
                 document.getElementById('edit-status').value = member.status || 'Aktif';
-                document.getElementById('edit-surat').value = member.surat || '';
-                document.getElementById('edit-alamat').value = member.alamat || '';
+                document.getElementById('edit-surat').value = member.alamat_surat_menyurat || '';
+                document.getElementById('edit-alamat').value = member.alamat_tetap || '';
             } else {
                 profileContainer.classList.add('hidden');
                 notFoundMsg.classList.remove('hidden');
@@ -510,23 +510,23 @@
             const updatedMember = {
                 email: document.getElementById('edit-email').value,
                 syarikat: document.getElementById('edit-syarikat').value.trim(),
-                ssm: document.getElementById('edit-ssm').value.trim(),
-                tmphSsm: document.getElementById('edit-tmph-ssm').value.trim(),
+                ssm_no: document.getElementById('edit-ssm').value.trim(),
+                tmph_ssm: document.getElementById('edit-tmph-ssm').value.trim(),
                 proksi: document.getElementById('edit-proksi').value.trim(),
-                kp: document.getElementById('edit-kp').value.trim(),
+                no_kp: document.getElementById('edit-kp').value.trim(),
                 introducer: document.getElementById('edit-introducer').value.trim(),
-                phone: document.getElementById('edit-phone').value.trim(),
-                pegawai: document.getElementById('edit-pegawai').value.trim(),
-                telPejabat: document.getElementById('edit-tel-pejabat').value.trim(),
+                hphone: document.getElementById('edit-phone').value.trim(),
+                pegawai_hubungi: document.getElementById('edit-pegawai').value.trim(),
+                tel_pejabat: document.getElementById('edit-tel-pejabat').value.trim(),
                 whatsapp: document.getElementById('edit-whatsapp').value,
                 tahun: document.getElementById('edit-tahun').value,
                 kategori: document.getElementById('edit-kategori').value.trim(),
-                jenisPerniagaan: document.getElementById('edit-jenis-perniagaan').value.trim(),
-                noResit: document.getElementById('edit-no-resit').value.trim(),
-                tarikhBayar: document.getElementById('edit-tarikh-bayar').value.trim(),
+                jenis_perniagaan: document.getElementById('edit-jenis-perniagaan').value.trim(),
+                no_resit: document.getElementById('edit-no-resit').value.trim(),
+                tarikh_bayar: document.getElementById('edit-tarikh-bayar').value.trim(),
                 status: document.getElementById('edit-status').value,
-                surat: document.getElementById('edit-surat').value.trim(),
-                alamat: document.getElementById('edit-alamat').value.trim()
+                alamat_surat_menyurat: document.getElementById('edit-surat').value.trim(),
+                alamat_tetap: document.getElementById('edit-alamat').value.trim()
             };
 
             const response = await queryBackend('update', updatedMember);
