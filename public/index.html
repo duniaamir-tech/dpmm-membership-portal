@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DPMM Putrajaya - Membership Portal & Analytics</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Tailwind CSS v3 Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for Analytics Visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -90,7 +90,7 @@
             <div class="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center text-center gap-4">
                 <img src="/images/dpmm-blue-text.png" 
                      alt="DPMM Putrajaya Logo" 
-                     class="w-96 h-96 object-contain rounded-full bg-white p-2 shadow-lg border border-white/50">
+                     class="w-28 h-28 object-contain rounded-full bg-white p-2 shadow-lg border border-white/50">
                 <h1 class="text-2xl font-bold tracking-tight">DPMM Putrajaya Membership Portal</h1>
                 
                 <!-- Main Navigation Tabs -->
@@ -334,6 +334,9 @@
                     </div>
 
                     <form id="updateForm" onsubmit="handleUpdate(event)" class="space-y-5">
+                        <!-- Hidden Primary Keys for Database Operations -->
+                        <input type="hidden" id="edit-no-ahli-hidden">
+                        
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nama Syarikat (Company Name)</label>
@@ -459,6 +462,8 @@
 
             if (tabId === 'analytics-tab') {
                 loadAnalyticsDashboard();
+            } else if (tabId === 'dashboard-tab') {
+                listMembers();
             }
         }
 
@@ -498,11 +503,9 @@
         /* --- Analytics Dashboard Logic --- */
         async function loadAnalyticsDashboard() {
             try {
-                // Fetch summary via primary queryBackend or direct REST call
                 let summaryRes = await queryBackend('analytics_summary', {});
                 let summary = summaryRes.summary;
 
-                // Fallback attempt to REST API standard if needed
                 if (!summary) {
                     try {
                         const res = await fetch('/api/analytics/summary');
@@ -512,7 +515,6 @@
                     }
                 }
 
-                // Fetch Members List Data
                 let membersRes = await queryBackend('list', {});
                 let members = membersRes.members || [];
 
@@ -523,7 +525,6 @@
                     } catch (e) {}
                 }
 
-                // Compute KPI values if server summary isn't available directly
                 const total = summary ? summary.total : members.length;
                 const active = summary ? summary.active : members.filter(m => m.status === 'Aktif').length;
                 const ratio = total > 0 ? ((active / total) * 100).toFixed(1) : 0;
@@ -532,7 +533,6 @@
                 document.getElementById('kpi-active').textContent = active;
                 document.getElementById('kpi-ratio').textContent = `${ratio}%`;
 
-                // Calculate Categories for Chart if needed
                 let categories = summary ? summary.topCategories : null;
                 if (!categories && members.length) {
                     const catMap = {};
@@ -685,6 +685,7 @@
                 searchStatus.innerText = `Member found: ${member.no_ahli || 'Record'}`;
 
                 document.getElementById('display-id').innerText = `No. Ahli: ${member.no_ahli || ''}`;
+                document.getElementById('edit-no-ahli-hidden').value = member.no_ahli || '';
                 document.getElementById('edit-syarikat').value = member.syarikat || '';
                 document.getElementById('edit-ssm').value = member.ssm_no || '';
                 document.getElementById('edit-tmph-ssm').value = member.tmph_ssm || '';
@@ -757,6 +758,7 @@
             saveBtn.innerText = 'Saving Changes...';
 
             const updatedMember = {
+                no_ahli: document.getElementById('edit-no-ahli-hidden').value,
                 email: document.getElementById('edit-email').value,
                 syarikat: document.getElementById('edit-syarikat').value.trim(),
                 ssm_no: document.getElementById('edit-ssm').value.trim(),
