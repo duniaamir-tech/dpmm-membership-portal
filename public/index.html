@@ -3,12 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DPMM Putrajaya - Membership Portal</title>
+    <title>DPMM Putrajaya - Membership Portal & Analytics</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js for Analytics Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS custom tab handling */
+        /* Tab Visibility */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        /* Dark Dashboard Modern Variables & Styling */
+        :root {
+            --db-bg: #0f172a;
+            --db-card-bg: #1e293b;
+            --db-text-main: #f8fafc;
+            --db-text-muted: #94a3b8;
+            --db-accent: #00e599;
+        }
+
+        .dashboard-container {
+            background-color: var(--db-bg);
+            color: var(--db-text-main);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--db-card-bg);
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-card {
+            background: var(--db-card-bg);
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+        }
+
+        .analytics-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--db-card-bg);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .analytics-table th, .analytics-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .analytics-table th {
+            background-color: #0f172a;
+            color: var(--db-text-muted);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: rgba(0, 229, 153, 0.2);
+            color: #00e599;
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-12">
@@ -21,20 +92,81 @@
                      alt="DPMM Putrajaya Logo" 
                      class="w-96 h-96 object-contain rounded-full bg-white p-2 shadow-lg border border-white/50">
                 <h1 class="text-2xl font-bold tracking-tight">DPMM Putrajaya Membership Portal</h1>
-                <nav class="flex space-x-2 mt-2">
-                    <button onclick="switchTab('register-tab')" id="btn-register-tab" class="tab-btn px-4 py-2 rounded-lg bg-slate-800 font-semibold shadow-inner transition">
+                
+                <!-- Main Navigation Tabs -->
+                <nav class="flex flex-wrap justify-center gap-2 mt-2">
+                    <button onclick="switchTab('analytics-tab')" id="btn-analytics-tab" class="tab-btn px-4 py-2 rounded-lg bg-slate-800 font-semibold shadow-inner transition">
+                        Analytics Dashboard
+                    </button>
+                    <button onclick="switchTab('register-tab')" id="btn-register-tab" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 font-semibold transition">
                         New Registration
                     </button>
                     <button onclick="switchTab('dashboard-tab')" id="btn-dashboard-tab" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 font-semibold transition">
-                        Self-Keeping Dashboard
+                        Self-Keeping Portal
                     </button>
                 </nav>
             </div>
         </header>
 
         <main class="max-w-5xl mx-auto px-4">
-            <!-- Registration Tab -->
-            <section id="register-tab" class="tab-content active bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+
+            <!-- 1. ANALYTICS DASHBOARD TAB -->
+            <section id="analytics-tab" class="tab-content active">
+                <div class="dashboard-container shadow-lg">
+                    <div class="border-b border-slate-700 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-white mb-1">Neon Database Analytics</h2>
+                        <p class="text-sm text-slate-400">Live metrics from PostgreSQL members database</p>
+                    </div>
+
+                    <!-- KPI Cards Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                        <div class="kpi-card">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total Members</h3>
+                            <div class="text-3xl font-bold text-[#00e599]" id="kpi-total">--</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Active Members</h3>
+                            <div class="text-3xl font-bold text-[#00e599]" id="kpi-active">--</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Active Ratio</h3>
+                            <div class="text-3xl font-bold text-[#00e599]" id="kpi-ratio">--%</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Section -->
+                    <div class="grid grid-cols-1 gap-6 mb-8">
+                        <div class="chart-card">
+                            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Top Categories</h3>
+                            <div class="relative h-64">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Data Table -->
+                    <h3 class="text-lg font-bold text-white mb-4">Recent Members</h3>
+                    <div class="overflow-x-auto rounded-lg border border-slate-700">
+                        <table class="analytics-table text-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID / No. Ahli</th>
+                                    <th>Company</th>
+                                    <th>Category</th>
+                                    <th>Payment Year</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-table-body">
+                                <tr><td colspan="5" class="text-center py-6 text-slate-400">Loading data from Neon...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. REGISTRATION TAB -->
+            <section id="register-tab" class="tab-content bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-100">Member Registration Form</h2>
                 <form id="registrationForm" onsubmit="handleRegistration(event)" class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -147,7 +279,7 @@
                 </form>
             </section>
 
-            <!-- Dashboard Tab -->
+            <!-- 3. SELF-KEEPING PORTAL TAB -->
             <section id="dashboard-tab" class="tab-content bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 pb-4 border-b border-gray-100">
                     <div>
@@ -310,11 +442,13 @@
                     No matching membership record found for the provided search query.
                 </div>
             </section>
+
         </main>
     </div>
 
     <script>
         const API_URL = '/api/members';
+        let chartInstance = null;
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -322,6 +456,10 @@
 
             document.getElementById(tabId).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('bg-slate-800', 'shadow-inner');
+
+            if (tabId === 'analytics-tab') {
+                loadAnalyticsDashboard();
+            }
         }
 
         function generateUniqueNoAhli() {
@@ -353,11 +491,128 @@
                 return result;
             } catch (err) {
                 console.error('Backend error:', err);
-                alert('Network error connecting to backend service.');
                 return { success: false, error: err.message };
             }
         }
 
+        /* --- Analytics Dashboard Logic --- */
+        async function loadAnalyticsDashboard() {
+            try {
+                // Fetch summary via primary queryBackend or direct REST call
+                let summaryRes = await queryBackend('analytics_summary', {});
+                let summary = summaryRes.summary;
+
+                // Fallback attempt to REST API standard if needed
+                if (!summary) {
+                    try {
+                        const res = await fetch('/api/analytics/summary');
+                        summary = await res.json();
+                    } catch (e) {
+                        summary = null;
+                    }
+                }
+
+                // Fetch Members List Data
+                let membersRes = await queryBackend('list', {});
+                let members = membersRes.members || [];
+
+                if (!members.length) {
+                    try {
+                        const res = await fetch('/api/members');
+                        members = await res.json();
+                    } catch (e) {}
+                }
+
+                // Compute KPI values if server summary isn't available directly
+                const total = summary ? summary.total : members.length;
+                const active = summary ? summary.active : members.filter(m => m.status === 'Aktif').length;
+                const ratio = total > 0 ? ((active / total) * 100).toFixed(1) : 0;
+
+                document.getElementById('kpi-total').textContent = total;
+                document.getElementById('kpi-active').textContent = active;
+                document.getElementById('kpi-ratio').textContent = `${ratio}%`;
+
+                // Calculate Categories for Chart if needed
+                let categories = summary ? summary.topCategories : null;
+                if (!categories && members.length) {
+                    const catMap = {};
+                    members.forEach(m => {
+                        const cat = m.kategori || 'Uncategorized';
+                        catMap[cat] = (catMap[cat] || 0) + 1;
+                    });
+                    categories = Object.keys(catMap).map(k => ({ kategori: k, count: catMap[k] }));
+                }
+
+                renderCategoryChart(categories || []);
+                renderAnalyticsTable(members);
+
+            } catch (err) {
+                console.error('Error fetching dashboard data:', err);
+            }
+        }
+
+        function renderCategoryChart(categories) {
+            const labels = categories.map(c => c.kategori);
+            const counts = categories.map(c => parseInt(c.count));
+
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Member Count',
+                        data: counts.length ? counts : [0],
+                        backgroundColor: '#00e599',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderAnalyticsTable(members) {
+            const tbody = document.getElementById('members-table-body');
+            tbody.innerHTML = '';
+
+            if (!members || members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">No members found in database.</td></tr>';
+                return;
+            }
+
+            members.slice(0, 10).forEach(m => {
+                const tr = document.createElement('tr');
+                const isActive = m.status === 'Aktif';
+                
+                tr.innerHTML = `
+                    <td class="font-mono font-semibold text-slate-200">${escapeHtml(m.no_ahli || m.id || '-')}</td>
+                    <td class="font-medium text-slate-100">${escapeHtml(m.syarikat || '-')}</td>
+                    <td>${escapeHtml(m.kategori || '-')}</td>
+                    <td>${escapeHtml(m.tahun_bayar || m.tahun || '-')}</td>
+                    <td>
+                        <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
+                            ${escapeHtml(m.status || 'Tidak Aktif')}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* --- Form Handling & Operations --- */
         async function handleRegistration(event) {
             event.preventDefault();
             const submitBtn = document.getElementById('btn-submit-registration');
@@ -540,6 +795,11 @@
         function hideProfile() {
             document.getElementById('profile-container').classList.add('hidden');
         }
+
+        // Initialize Analytics Dashboard on initial page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAnalyticsDashboard();
+        });
     </script>
 </body>
 </html>
