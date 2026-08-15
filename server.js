@@ -1,154 +1,226 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { neon } from '@neondatabase/serverless';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const { Pool } = require('pg');
+const path = require('path');
+const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
+// Middleware
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'))); // Serves static files (e.g., index.html, logo images)
 
-app.post('/api/members', async (req, res) => {
-  try {
-    const { action, data } = req.body || {};
-    const connectionString = process.env.DATABASE_URL;
+// PostgreSQL Pool Connection for Neon DB
+// Set process.env.DATABASE_URL or replace with your connection string:
+// postgresql://user:password@ep-something.region.aws.neon.tech/neondb?sslmode=require
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
 
-    if (!connectionString) {
-      return res.status(500).json({
-        success: false,
-        error: 'DATABASE_URL is not configured.'
-      });
+// Test connection and auto-create 'members' table if it doesn't exist
+async function initDb() {
+    try {
+        const client = await pool.connect();
+        console.log('Successfully connected to Neon PostgreSQL Database.');
+
+        const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS members (
+                id SERIAL PRIMARY KEY,
+                no_ahli VARCHAR(100) UNIQUE,
+                syarikat VARCHAR(255) NOT NULL,
+                ssm_no VARCHAR(100) NOT NULL,
+                tmph_ssm VARCHAR(100),
+                proksi VARCHAR(255) NOT NULL,
+                no_kp VARCHAR(100) NOT NULL,
+                introducer VARCHAR(255),
+                email VARCHAR(255) UNIQUE NOT NULL,
+                hphone VARCHAR(50) NOT NULL,
+                pegawai_hubungi VARCHAR(255),
+                tel_pejabat VARCHAR(50),
+                tahun_bayar INT,
+                tahun VARCHAR(20) DEFAULT '2026',
+                kategori VARCHAR(100),
+                jenis_perniagaan VARCHAR(255),
+                no_resit VARCHAR(100),
+                tarikh_bayar VARCHAR(50),
+                status VARCHAR(50) DEFAULT 'Aktif',
+                alamat_surat_menyurat TEXT,
+                alamat_tetap TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+        await client.query(createTableQuery);
+        client.release();
+        console.log('Database table verification/initialization complete.');
+    } catch (err) {
+        console.error('Error initializing PostgreSQL database:', err.message);
     }
+}
 
-    const sql = neon(connectionString);
+initDb();
 
-    // Helper table creation aligned strictly with your database schema
-    const ensureTableExists = async () => {
-      await sql`
-        CREATE TABLE IF NOT EXISTS members (
-          id SERIAL PRIMARY KEY,
-          no_ahli VARCHAR,
-          ssm_no VARCHAR,
-          tmph_ssm VARCHAR,
-          tahun VARCHAR,
-          syarikat VARCHAR,
-          proksi VARCHAR,
-          no_kp VARCHAR,
-          introducer VARCHAR,
-          email VARCHAR,
-          hphone VARCHAR,
-          pegawai_hubungi VARCHAR,
-          tel_pejabat VARCHAR,
-          kategori VARCHAR,
-          jenis_perniagaan TEXT,
-          no_resit VARCHAR,
-          tarikh_bayar TEXT,
-          tahun_bayar INTEGER,
-          status VARCHAR,
-          alamat_surat_menyurat TEXT,
-          alamat_tetap TEXT,
-          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+// Helper Function: Compute Analytics Metrics
+async function getAnalyticsSummary() {
+    const totalRes = await pool.query('SELECT COUNT(*) AS total FROM members');
+    const activeRes = await pool.query("SELECT COUNT(*) AS active FROM members WHERE status = 'Aktif'");
+    
+    const categoriesRes = await pool.query(`
+        SELECT kategori, COUNT(*) as count 
+        FROM members 
+        WHERE kategori IS NOT NULL AND kategori != ''
+        GROUP BY kategori 
+        ORDER BY count DESC 
+        LIMIT 5
+    `);
+
+    return {
+        total: parseInt(totalRes.rows[0].total, 10) || 0,
+        active: parseInt(activeRes.rows[0].active, 10) || 0,
+        topCategories: categoriesRes.rows
     };
+}
 
-    if (action === 'register') {
-      await ensureTableExists();
+// ==========================================
+// CENTRAL UNIFIED ENDPOINT: POST /api/members
+// ==========================================
+app.post('/api/members', async (req, res) => {
+    const { action, data } = req.body || {};
 
-      await sql`
-        INSERT INTO members (
-          no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer,
-          email, hphone, pegawai_hubungi, tel_pejabat, tahun, kategori,
-          jenis_perniagaan, no_resit, tarikh_bayar, tahun_bayar, status,
-          alamat_surat_menyurat, alamat_tetap
-        ) VALUES (
-          ${data?.no_ahli || null}, ${data?.syarikat || null}, ${data?.ssm_no || null}, ${data?.tmph_ssm || null}, ${data?.proksi || null},
-          ${data?.no_kp || null}, ${data?.introducer || null}, ${data?.email || null}, ${data?.hphone || null}, ${data?.pegawai_hubungi || null},
-          ${data?.tel_pejabat || null}, ${data?.tahun || null}, ${data?.kategori || null},
-          ${data?.jenis_perniagaan || null}, ${data?.no_resit || null}, ${data?.tarikh_bayar || null}, ${data?.tahun_bayar || null}, ${data?.status || null},
-          ${data?.alamat_surat_menyurat || null}, ${data?.alamat_tetap || null}
-        )
-      `;
+    try {
+        // 1. Analytics Summary Action
+        if (action === 'analytics_summary') {
+            const summary = await getAnalyticsSummary();
+            return res.json({ success: true, summary });
+        }
 
-      return res.json({ success: true });
+        // 2. Member Registration Action
+        if (action === 'register') {
+            const {
+                no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
+                introducer, email, hphone, pegawai_hubungi, tel_pejabat,
+                tahun_bayar, tahun, kategori, jenis_perniagaan,
+                no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
+            } = data;
+
+            const insertQuery = `
+                INSERT INTO members (
+                    no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
+                    introducer, email, hphone, pegawai_hubungi, tel_pejabat,
+                    tahun_bayar, tahun, kategori, jenis_perniagaan,
+                    no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                RETURNING *;
+            `;
+
+            const values = [
+                no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
+                introducer, email, hphone, pegawai_hubungi, tel_pejabat,
+                tahun_bayar, tahun, kategori, jenis_perniagaan,
+                no_resit, tarikh_bayar, status || 'Aktif', alamat_surat_menyurat, alamat_tetap
+            ];
+
+            const result = await pool.query(insertQuery, values);
+            return res.json({ success: true, member: result.rows[0] });
+        }
+
+        // 3. Search Member Action
+        if (action === 'search') {
+            const queryTerm = `%${data.query}%`;
+            const searchQuery = `
+                SELECT * FROM members 
+                WHERE no_ahli ILIKE $1 
+                   OR syarikat ILIKE $1 
+                   OR proksi ILIKE $1 
+                   OR email ILIKE $1 
+                LIMIT 1;
+            `;
+            const result = await pool.query(searchQuery, [queryTerm]);
+            return res.json({ success: true, member: result.rows[0] || null });
+        }
+
+        // 4. List All Members Action
+        if (action === 'list') {
+            const listQuery = 'SELECT * FROM members ORDER BY id DESC LIMIT 100;';
+            const result = await pool.query(listQuery);
+            return res.json({ success: true, members: result.rows });
+        }
+
+        // 5. Update Member Action
+        if (action === 'update') {
+            const {
+                email, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
+                introducer, hphone, pegawai_hubungi, tel_pejabat,
+                tahun_bayar, tahun, kategori, jenis_perniagaan,
+                no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
+            } = data;
+
+            const updateQuery = `
+                UPDATE members SET
+                    syarikat = $1, ssm_no = $2, tmph_ssm = $3, proksi = $4,
+                    no_kp = $5, introducer = $6, hphone = $7, pegawai_hubungi = $8,
+                    tel_pejabat = $9, tahun_bayar = $10, tahun = $11, kategori = $12,
+                    jenis_perniagaan = $13, no_resit = $14, tarikh_bayar = $15,
+                    status = $16, alamat_surat_menyurat = $17, alamat_tetap = $18
+                WHERE email = $19
+                RETURNING *;
+            `;
+
+            const values = [
+                syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer, hphone,
+                pegawai_hubungi, tel_pejabat, tahun_bayar, tahun, kategori,
+                jenis_perniagaan, no_resit, tarikh_bayar, status,
+                alamat_surat_menyurat, alamat_tetap, email
+            ];
+
+            const result = await pool.query(updateQuery, values);
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ success: false, error: 'Member record not found.' });
+            }
+
+            return res.json({ success: true, member: result.rows[0] });
+        }
+
+        return res.status(400).json({ success: false, error: 'Invalid or unsupported action requested.' });
+
+    } catch (err) {
+        console.error('API Error:', err.message);
+        return res.status(500).json({ success: false, error: err.message });
     }
-
-    if (action === 'search') {
-      await ensureTableExists();
-
-      const query = data?.query || '';
-      const rows = await sql`
-        SELECT * FROM members
-        WHERE no_ahli ILIKE ${'%' + query + '%'}
-           OR syarikat ILIKE ${'%' + query + '%'}
-           OR proksi ILIKE ${'%' + query + '%'}
-           OR email ILIKE ${'%' + query + '%'}
-        ORDER BY id DESC
-        LIMIT 1
-      `;
-
-      return res.json({ success: true, member: rows[0] || null });
-    }
-
-    if (action === 'list') {
-      await ensureTableExists();
-
-      const rows = await sql`
-        SELECT id, no_ahli, syarikat, proksi, email, status, created_at
-        FROM members
-        ORDER BY id DESC
-        LIMIT 50
-      `;
-
-      return res.json({ success: true, members: rows });
-    }
-
-    if (action === 'update') {
-      await ensureTableExists();
-
-      await sql`
-        UPDATE members
-        SET syarikat = ${data?.syarikat || null},
-            ssm_no = ${data?.ssm_no || null},
-            tmph_ssm = ${data?.tmph_ssm || null},
-            proksi = ${data?.proksi || null},
-            no_kp = ${data?.no_kp || null},
-            introducer = ${data?.introducer || null},
-            hphone = ${data?.hphone || null},
-            pegawai_hubungi = ${data?.pegawai_hubungi || null},
-            tel_pejabat = ${data?.tel_pejabat || null},
-            tahun = ${data?.tahun || null},
-            kategori = ${data?.kategori || null},
-            jenis_perniagaan = ${data?.jenis_perniagaan || null},
-            no_resit = ${data?.no_resit || null},
-            tarikh_bayar = ${data?.tarikh_bayar || null},
-            tahun_bayar = ${data?.tahun_bayar || null},
-            status = ${data?.status || null},
-            alamat_surat_menyurat = ${data?.alamat_surat_menyurat || null},
-            alamat_tetap = ${data?.alamat_tetap || null},
-            updated_at = NOW()
-        WHERE email = ${data?.email || ''}
-      `;
-
-      return res.json({ success: true });
-    }
-
-    return res.status(400).json({ success: false, error: 'Unknown action' });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
 });
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// ==========================================
+// REST STANDALONE ENDPOINTS
+// ==========================================
+
+// GET /api/analytics/summary
+app.get('/api/analytics/summary', async (req, res) => {
+    try {
+        const summary = await getAnalyticsSummary();
+        res.json(summary);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+// GET /api/members
+app.get('/api/members', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM members ORDER BY id DESC LIMIT 100;');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Catch-all route to serve the SPA frontend
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start Express Server
+app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
 });
