@@ -9,22 +9,19 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // Serves static files (e.g., index.html, logo images)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // PostgreSQL Pool Connection for Neon DB
-// Set process.env.DATABASE_URL or replace with your connection string:
-// postgresql://user:password@ep-something.region.aws.neon.tech/neondb?sslmode=require
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Test connection and auto-create 'members' table if it doesn't exist
+// Auto-create 'members' table with safe client release
 async function initDb() {
+    let client;
     try {
-        const client = await pool.connect();
-        console.log('Successfully connected to Neon PostgreSQL Database.');
-
+        client = await pool.connect();
         const createTableQuery = `
             CREATE TABLE IF NOT EXISTS members (
                 id SERIAL PRIMARY KEY,
@@ -52,10 +49,11 @@ async function initDb() {
             );
         `;
         await client.query(createTableQuery);
-        client.release();
-        console.log('Database table verification/initialization complete.');
+        console.log('Database verification complete.');
     } catch (err) {
         console.error('Error initializing PostgreSQL database:', err.message);
+    } finally {
+        if (client) client.release();
     }
 }
 
@@ -82,9 +80,7 @@ async function getAnalyticsSummary() {
     };
 }
 
-// ==========================================
 // CENTRAL UNIFIED ENDPOINT: POST /api/members
-// ==========================================
 app.post('/api/members', async (req, res) => {
     const { action, data } = req.body || {};
 
@@ -150,7 +146,7 @@ app.post('/api/members', async (req, res) => {
         // 5. Update Member Action
         if (action === 'update') {
             const {
-                email, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
+                no_ahli, email, syarikat, ssm_no, tmph_ssm, proksi, no_kp,
                 introducer, hphone, pegawai_hubungi, tel_pejabat,
                 tahun_bayar, tahun, kategori, jenis_perniagaan,
                 no_resit, tarikh_bayar, status, alamat_surat_menyurat, alamat_tetap
@@ -163,7 +159,7 @@ app.post('/api/members', async (req, res) => {
                     tel_pejabat = $9, tahun_bayar = $10, tahun = $11, kategori = $12,
                     jenis_perniagaan = $13, no_resit = $14, tarikh_bayar = $15,
                     status = $16, alamat_surat_menyurat = $17, alamat_tetap = $18
-                WHERE email = $19
+                WHERE (no_ahli = $19 AND $19 IS NOT NULL AND $19 != '') OR email = $20
                 RETURNING *;
             `;
 
@@ -171,7 +167,7 @@ app.post('/api/members', async (req, res) => {
                 syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer, hphone,
                 pegawai_hubungi, tel_pejabat, tahun_bayar, tahun, kategori,
                 jenis_perniagaan, no_resit, tarikh_bayar, status,
-                alamat_surat_menyurat, alamat_tetap, email
+                alamat_surat_menyurat, alamat_tetap, no_ahli || null, email
             ];
 
             const result = await pool.query(updateQuery, values);
@@ -191,11 +187,7 @@ app.post('/api/members', async (req, res) => {
     }
 });
 
-// ==========================================
 // REST STANDALONE ENDPOINTS
-// ==========================================
-
-// GET /api/analytics/summary
 app.get('/api/analytics/summary', async (req, res) => {
     try {
         const summary = await getAnalyticsSummary();
@@ -205,7 +197,6 @@ app.get('/api/analytics/summary', async (req, res) => {
     }
 });
 
-// GET /api/members
 app.get('/api/members', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM members ORDER BY id DESC LIMIT 100;');
@@ -215,12 +206,16 @@ app.get('/api/members', async (req, res) => {
     }
 });
 
-// Catch-all route to serve the SPA frontend
+// SPA Catch-all Fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Express Server
-app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
-});
+// Export module for Vercel functions & local execution
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server listening on http://localhost:${PORT}`);
+    });
+}
