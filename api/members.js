@@ -1,14 +1,10 @@
 // /api/members.js
-// Vercel Serverless Function. Uses the Neon HTTP driver, which is the
-// recommended choice for serverless/edge functions (no persistent TCP
-// connection to manage, works well with Vercel's execution model).
+// Vercel Serverless Function — targets the 'members' table (same schema as
+// server.js), using the Neon HTTP driver which is the recommended choice
+// for serverless functions (no persistent connection to manage).
 //
-// Requires the DATABASE_URL env var (the pooled connection string Neon
-// added to your Vercel project) to be set in Project Settings > Environment
-// Variables for whichever environment you're testing (Production/Preview/
-// Development).
-//
-// npm install @neondatabase/serverless   (run this in your project root)
+// Requires DATABASE_URL to be set in Vercel Project Settings > Environment
+// Variables (Production/Preview/Development as needed).
 
 const { neon } = require('@neondatabase/serverless');
 
@@ -41,11 +37,7 @@ module.exports = async (req, res) => {
   try {
     switch (action) {
       case 'list': {
-        const members = await sql`
-          SELECT * FROM dpmm_ptj_members
-          ORDER BY tarikh_daftar DESC NULLS LAST
-          LIMIT 200
-        `;
+        const members = await sql`SELECT * FROM members ORDER BY id DESC LIMIT 100`;
         res.status(200).json({ success: true, members });
         return;
       }
@@ -55,15 +47,15 @@ module.exports = async (req, res) => {
           SELECT
             count(*)::int AS total,
             count(*) FILTER (WHERE status = 'Aktif')::int AS active
-          FROM dpmm_ptj_members
+          FROM members
         `;
         const topCategories = await sql`
           SELECT kategori, count(*)::int AS count
-          FROM dpmm_ptj_members
-          WHERE kategori IS NOT NULL
+          FROM members
+          WHERE kategori IS NOT NULL AND kategori != ''
           GROUP BY kategori
           ORDER BY count DESC
-          LIMIT 8
+          LIMIT 5
         `;
         res.status(200).json({ success: true, summary: { total, active, topCategories } });
         return;
@@ -77,18 +69,14 @@ module.exports = async (req, res) => {
         }
         const like = `%${query}%`;
         const rows = await sql`
-          SELECT * FROM dpmm_ptj_members
+          SELECT * FROM members
           WHERE no_ahli ILIKE ${like}
              OR syarikat ILIKE ${like}
              OR proksi ILIKE ${like}
              OR email ILIKE ${like}
           LIMIT 1
         `;
-        if (rows.length === 0) {
-          res.status(200).json({ success: true, member: null });
-          return;
-        }
-        res.status(200).json({ success: true, member: rows[0] });
+        res.status(200).json({ success: true, member: rows[0] || null });
         return;
       }
 
@@ -98,34 +86,38 @@ module.exports = async (req, res) => {
           res.status(400).json({ success: false, error: 'Missing required fields.' });
           return;
         }
-        const existing = await sql`SELECT 1 FROM dpmm_ptj_members WHERE no_ahli = ${m.no_ahli} LIMIT 1`;
-        if (existing.length > 0) {
-          res.status(409).json({ success: false, error: `No. Ahli ${m.no_ahli} already exists.` });
-          return;
+        try {
+          const rows = await sql`
+            INSERT INTO members (
+              no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer,
+              email, hphone, pegawai_hubungi, tel_pejabat, tahun_bayar,
+              kategori, jenis_perniagaan, no_resit, tarikh_bayar, status,
+              alamat_surat_menyurat, alamat_tetap
+            ) VALUES (
+              ${m.no_ahli}, ${m.syarikat}, ${m.ssm_no}, ${m.tmph_ssm || null},
+              ${m.proksi}, ${m.no_kp}, ${m.introducer || null}, ${m.email},
+              ${m.hphone}, ${m.pegawai_hubungi || null}, ${m.tel_pejabat || null},
+              ${m.tahun_bayar || null}, ${m.kategori || null}, ${m.jenis_perniagaan || null},
+              ${m.no_resit || null}, ${m.tarikh_bayar || null}, ${m.status || 'Aktif'},
+              ${m.alamat_surat_menyurat || null}, ${m.alamat_tetap || null}
+            )
+            RETURNING *
+          `;
+          res.status(200).json({ success: true, member: rows[0] });
+        } catch (err) {
+          if (String(err.message).includes('duplicate key')) {
+            res.status(409).json({ success: false, error: 'No. Ahli or email already exists.' });
+            return;
+          }
+          throw err;
         }
-        await sql`
-          INSERT INTO dpmm_ptj_members (
-            no_ahli, syarikat, ssm_no, tmph_ssm, proksi, no_kp, introducer,
-            email, hphone, pegawai_hubungi, tel_pejabat, tahun_bayar,
-            kategori, jenis_perniagaan, no_resit, tarikh_bayar, status,
-            alamat_surat_menyurat, alamat_tetap, tarikh_daftar
-          ) VALUES (
-            ${m.no_ahli}, ${m.syarikat}, ${m.ssm_no}, ${m.tmph_ssm || null},
-            ${m.proksi}, ${m.no_kp}, ${m.introducer || null}, ${m.email},
-            ${m.hphone}, ${m.pegawai_hubungi || null}, ${m.tel_pejabat || null},
-            ${m.tahun_bayar || null}, ${m.kategori || null}, ${m.jenis_perniagaan || null},
-            ${m.no_resit || null}, ${m.tarikh_bayar || null}, ${m.status || 'Aktif'},
-            ${m.alamat_surat_menyurat || null}, ${m.alamat_tetap || null}, CURRENT_DATE
-          )
-        `;
-        res.status(200).json({ success: true });
         return;
       }
 
       case 'update': {
         const m = data || {};
-        if (!m.no_ahli) {
-          res.status(400).json({ success: false, error: 'no_ahli is required to update a record.' });
+        if (!m.no_ahli && !m.email) {
+          res.status(400).json({ success: false, error: 'no_ahli or email is required to update a record.' });
           return;
         }
         const setClauses = [];
@@ -140,18 +132,21 @@ module.exports = async (req, res) => {
           res.status(400).json({ success: false, error: 'No fields to update.' });
           return;
         }
-        // Build dynamic SET list safely using sql.unsafe with parameter placeholders
         const setSql = setClauses.map((col, i) => `${col} = $${i + 1}`).join(', ');
-        values.push(m.no_ahli);
+        values.push(m.no_ahli || null, m.email || null);
+        const whereNoAhliIdx = values.length - 1;
+        const whereEmailIdx = values.length;
         const result = await sql.query(
-          `UPDATE dpmm_ptj_members SET ${setSql} WHERE no_ahli = $${values.length} RETURNING no_ahli`,
+          `UPDATE members SET ${setSql}
+           WHERE (no_ahli = $${whereNoAhliIdx} AND $${whereNoAhliIdx} IS NOT NULL) OR email = $${whereEmailIdx}
+           RETURNING *`,
           values
         );
         if (result.length === 0) {
-          res.status(404).json({ success: false, error: `No member found with No. Ahli ${m.no_ahli}` });
+          res.status(404).json({ success: false, error: 'Member record not found.' });
           return;
         }
-        res.status(200).json({ success: true });
+        res.status(200).json({ success: true, member: result[0] });
         return;
       }
 
