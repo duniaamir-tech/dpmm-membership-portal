@@ -9,11 +9,9 @@
     <!-- Chart.js for Analytics Visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Tab Visibility */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Dark Dashboard Modern Variables & Styling */
         :root {
             --db-bg: #0f172a;
             --db-card-bg: #1e293b;
@@ -29,19 +27,12 @@
             padding: 1.5rem;
         }
 
-        .kpi-card {
+        .kpi-card, .chart-card {
             background: var(--db-card-bg);
             padding: 1.25rem;
             border-radius: 0.5rem;
             border: 1px solid #334155;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .chart-card {
-            background: var(--db-card-bg);
-            padding: 1.25rem;
-            border-radius: 0.5rem;
-            border: 1px solid #334155;
         }
 
         .analytics-table {
@@ -126,7 +117,7 @@
                      class="w-28 h-28 object-contain rounded-full bg-white p-2 shadow-lg border border-white/50">
                 <h1 class="text-2xl font-bold tracking-tight">DPMM Putrajaya Membership Portal</h1>
                 
-                <!-- Main Navigation Tabs -->
+                <!-- Navigation Tabs -->
                 <nav class="flex flex-wrap justify-center gap-2 mt-2">
                     <button onclick="switchTab('analytics-tab')" id="btn-analytics-tab" class="tab-btn px-4 py-2 rounded-lg bg-slate-800 font-semibold shadow-inner transition">
                         Analytics Dashboard
@@ -183,7 +174,7 @@
                         <table class="analytics-table text-sm">
                             <thead>
                                 <tr>
-                                    <th>ID / No. Ahli</th>
+                                    <th>No. Ahli</th>
                                     <th>Company</th>
                                     <th>Category</th>
                                     <th>Payment Year</th>
@@ -207,9 +198,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">No. Ahli (Membership No.) *</label>
                             <div class="flex gap-2">
                                 <input type="text" id="reg-no-ahli" required class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., DPMMPTJ/1234/IN/26">
-                                <button type="button" onclick="generateUniqueNoAhli()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-lg transition whitespace-nowrap">
-                                    Auto ID
-                                </button>
+                                <button type="button" onclick="generateUniqueNoAhli()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-lg transition whitespace-nowrap">Auto ID</button>
                             </div>
                         </div>
                         <div>
@@ -254,17 +243,13 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tahun Bayar (Payment Year)</label>
-                            <input type="number" id="reg-tahun-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 2026">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tahun (Year Join)</label>
-                            <input type="number" id="reg-tahun" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="2026">
+                            <input type="number" id="reg-tahun-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="2026">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kategori (Category)</label>
                             <input type="text" id="reg-kategori" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
-                        <div>
+                        <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Perniagaan (Type of Business)</label>
                             <input type="text" id="reg-jenis-perniagaan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
@@ -280,7 +265,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tarikh Bayar (Payment Date)</label>
-                                    <input type="date" id="reg-tarikh-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <input type="text" id="reg-tarikh-bayar" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 </div>
                             </div>
                         </div>
@@ -348,7 +333,7 @@
                                     <th class="border-b border-slate-300 px-5 py-3 font-extrabold">Proksi</th>
                                     <th class="border-b border-slate-300 px-5 py-3 font-extrabold">Email</th>
                                     <th class="border-b border-slate-300 px-5 py-3 font-extrabold">Status</th>
-                                    <th class="border-b border-slate-300 px-5 py-3 font-extrabold">Date</th>
+                                    <th class="border-b border-slate-300 px-5 py-3 font-extrabold">Registered Date</th>
                                 </tr>
                             </thead>
                             <tbody id="records-list-body" class="divide-y divide-slate-200"></tbody>
@@ -367,7 +352,6 @@
                     </div>
 
                     <form id="updateForm" onsubmit="handleUpdate(event)" class="space-y-5">
-                        <!-- Hidden Primary Keys for Database Operations -->
                         <input type="hidden" id="edit-no-ahli-hidden">
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -416,10 +400,6 @@
                                 <input type="number" id="edit-tahun-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
-                                <input type="number" id="edit-tahun" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                                 <input type="text" id="edit-kategori" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
@@ -439,7 +419,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Tarikh Bayar (Payment Date)</label>
-                                        <input type="date" id="edit-tarikh-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <input type="text" id="edit-tarikh-bayar" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                 </div>
                             </div>
@@ -486,7 +466,6 @@
         const API_URL = '/api/members';
         let chartInstance = null;
 
-        /* --- AUTHENTICATION LOGIC --- */
         function checkAuth() {
             const isAuthenticated = sessionStorage.getItem('dpmm_auth');
             if (isAuthenticated === 'true') {
@@ -519,7 +498,6 @@
             checkAuth();
         }
 
-        /* --- TAB SWITCHING & DASHBOARD LOGIC --- */
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('bg-slate-800', 'shadow-inner'));
@@ -567,30 +545,13 @@
             }
         }
 
-        /* --- Analytics Dashboard Logic --- */
         async function loadAnalyticsDashboard() {
             try {
                 let summaryRes = await queryBackend('analytics_summary', {});
                 let summary = summaryRes.summary;
 
-                if (!summary) {
-                    try {
-                        const res = await fetch('/api/analytics/summary');
-                        summary = await res.json();
-                    } catch (e) {
-                        summary = null;
-                    }
-                }
-
                 let membersRes = await queryBackend('list', {});
                 let members = membersRes.members || [];
-
-                if (!members.length) {
-                    try {
-                        const res = await fetch('/api/members');
-                        members = await res.json();
-                    } catch (e) {}
-                }
 
                 const total = summary ? summary.total : members.length;
                 const active = summary ? summary.active : members.filter(m => m.status === 'Aktif').length;
@@ -612,7 +573,6 @@
 
                 renderCategoryChart(categories || []);
                 renderAnalyticsTable(members);
-
             } catch (err) {
                 console.error('Error fetching dashboard data:', err);
             }
@@ -623,10 +583,7 @@
             const counts = categories.map(c => parseInt(c.count));
 
             const ctx = document.getElementById('categoryChart').getContext('2d');
-            
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
+            if (chartInstance) chartInstance.destroy();
 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
@@ -665,10 +622,10 @@
                 const isActive = m.status === 'Aktif';
                 
                 tr.innerHTML = `
-                    <td class="font-mono font-semibold text-slate-200">${escapeHtml(m.no_ahli || m.id || '-')}</td>
+                    <td class="font-mono font-semibold text-slate-200">${escapeHtml(m.no_ahli || '-')}</td>
                     <td class="font-medium text-slate-100">${escapeHtml(m.syarikat || '-')}</td>
                     <td>${escapeHtml(m.kategori || '-')}</td>
-                    <td>${escapeHtml(m.tahun_bayar || m.tahun || '-')}</td>
+                    <td>${escapeHtml(m.tahun_bayar || '-')}</td>
                     <td>
                         <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
                             ${escapeHtml(m.status || 'Tidak Aktif')}
@@ -679,7 +636,6 @@
             });
         }
 
-        /* --- Form Handling & Operations --- */
         async function handleRegistration(event) {
             event.preventDefault();
             const submitBtn = document.getElementById('btn-submit-registration');
@@ -699,11 +655,10 @@
                 pegawai_hubungi: document.getElementById('reg-pegawai').value.trim(),
                 tel_pejabat: document.getElementById('reg-tel-pejabat').value.trim(),
                 tahun_bayar: document.getElementById('reg-tahun-bayar').value ? parseInt(document.getElementById('reg-tahun-bayar').value, 10) : null,
-                tahun: document.getElementById('reg-tahun').value,
                 kategori: document.getElementById('reg-kategori').value.trim(),
                 jenis_perniagaan: document.getElementById('reg-jenis-perniagaan').value.trim(),
                 no_resit: document.getElementById('reg-no-resit').value.trim(),
-                tarikh_bayar: document.getElementById('reg-tarikh-bayar').value,
+                tarikh_bayar: document.getElementById('reg-tarikh-bayar').value.trim(),
                 status: document.getElementById('reg-status').value,
                 alamat_surat_menyurat: document.getElementById('reg-surat').value.trim(),
                 alamat_tetap: document.getElementById('reg-alamat').value.trim()
@@ -764,7 +719,6 @@
                 document.getElementById('edit-pegawai').value = member.pegawai_hubungi || '';
                 document.getElementById('edit-tel-pejabat').value = member.tel_pejabat || '';
                 document.getElementById('edit-tahun-bayar').value = member.tahun_bayar || '';
-                document.getElementById('edit-tahun').value = member.tahun || '2026';
                 document.getElementById('edit-kategori').value = member.kategori || '';
                 document.getElementById('edit-jenis-perniagaan').value = member.jenis_perniagaan || '';
                 document.getElementById('edit-no-resit').value = member.no_resit || '';
@@ -810,7 +764,7 @@
                         <td class="border-b border-slate-200 px-5 py-4">
                             <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[12px] font-extrabold text-blue-800">${escapeHtml(member.status || '—')}</span>
                         </td>
-                        <td class="border-b border-slate-200 px-5 py-4 text-[15px] font-medium text-slate-700">${member.created_at ? new Date(member.created_at).toLocaleDateString() : '—'}</td>
+                        <td class="border-b border-slate-200 px-5 py-4 text-[15px] font-medium text-slate-700">${member.tarikh_daftar ? new Date(member.tarikh_daftar).toLocaleDateString() : '—'}</td>
                     </tr>
                 `).join('');
             } else {
@@ -837,7 +791,6 @@
                 pegawai_hubungi: document.getElementById('edit-pegawai').value.trim(),
                 tel_pejabat: document.getElementById('edit-tel-pejabat').value.trim(),
                 tahun_bayar: document.getElementById('edit-tahun-bayar').value ? parseInt(document.getElementById('edit-tahun-bayar').value, 10) : null,
-                tahun: document.getElementById('edit-tahun').value,
                 kategori: document.getElementById('edit-kategori').value.trim(),
                 jenis_perniagaan: document.getElementById('edit-jenis-perniagaan').value.trim(),
                 no_resit: document.getElementById('edit-no-resit').value.trim(),
@@ -865,7 +818,6 @@
             document.getElementById('profile-container').classList.add('hidden');
         }
 
-        // Check authentication state on page load
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
         });
