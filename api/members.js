@@ -1,10 +1,6 @@
 // /api/members.js
-// Vercel Serverless Function — targets the 'members' table (same schema as
-// server.js), using the Neon HTTP driver which is the recommended choice
-// for serverless functions (no persistent connection to manage).
-//
-// Requires DATABASE_URL to be set in Vercel Project Settings > Environment
-// Variables (Production/Preview/Development as needed).
+// Vercel Serverless Function — targets the 'members' table using the 
+// Neon HTTP driver (@neondatabase/serverless).
 
 const { neon } = require('@neondatabase/serverless');
 
@@ -120,33 +116,49 @@ module.exports = async (req, res) => {
           res.status(400).json({ success: false, error: 'no_ahli or email is required to update a record.' });
           return;
         }
-        const setClauses = [];
-        const values = [];
-        EDITABLE_FIELDS.forEach((field) => {
-          if (Object.prototype.hasOwnProperty.call(m, field)) {
-            setClauses.push(field);
-            values.push(m[field] === '' ? null : m[field]);
-          }
-        });
-        if (setClauses.length === 0) {
+
+        // Verify if there is at least one editable field provided in the payload
+        const hasFieldsToUpdate = EDITABLE_FIELDS.some((field) =>
+          Object.prototype.hasOwnProperty.call(m, field)
+        );
+
+        if (!hasFieldsToUpdate) {
           res.status(400).json({ success: false, error: 'No fields to update.' });
           return;
         }
-        const setSql = setClauses.map((col, i) => `${col} = $${i + 1}`).join(', ');
-        values.push(m.no_ahli || null, m.email || null);
-        const whereNoAhliIdx = values.length - 1;
-        const whereEmailIdx = values.length;
-        const result = await sql.query(
-          `UPDATE members SET ${setSql}
-           WHERE (no_ahli = $${whereNoAhliIdx} AND $${whereNoAhliIdx} IS NOT NULL) OR email = $${whereEmailIdx}
-           RETURNING *`,
-          values
-        );
-        if (result.length === 0) {
+
+        // Use COALESCE to only update fields present in the request payload
+        const updatedRows = await sql`
+          UPDATE members
+          SET
+            syarikat               = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'syarikat')} THEN ${m.syarikat || null} ELSE syarikat END,
+            ssm_no                 = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'ssm_no')} THEN ${m.ssm_no || null} ELSE ssm_no END,
+            tmph_ssm               = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'tmph_ssm')} THEN ${m.tmph_ssm || null} ELSE tmph_ssm END,
+            proksi                 = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'proksi')} THEN ${m.proksi || null} ELSE proksi END,
+            no_kp                  = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'no_kp')} THEN ${m.no_kp || null} ELSE no_kp END,
+            introducer             = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'introducer')} THEN ${m.introducer || null} ELSE introducer END,
+            hphone                 = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'hphone')} THEN ${m.hphone || null} ELSE hphone END,
+            pegawai_hubungi        = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'pegawai_hubungi')} THEN ${m.pegawai_hubungi || null} ELSE pegawai_hubungi END,
+            tel_pejabat            = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'tel_pejabat')} THEN ${m.tel_pejabat || null} ELSE tel_pejabat END,
+            tahun_bayar            = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'tahun_bayar')} THEN ${m.tahun_bayar || null} ELSE tahun_bayar END,
+            kategori               = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'kategori')} THEN ${m.kategori || null} ELSE kategori END,
+            jenis_perniagaan       = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'jenis_perniagaan')} THEN ${m.jenis_perniagaan || null} ELSE jenis_perniagaan END,
+            no_resit               = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'no_resit')} THEN ${m.no_resit || null} ELSE no_resit END,
+            tarikh_bayar           = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'tarikh_bayar')} THEN ${m.tarikh_bayar || null} ELSE tarikh_bayar END,
+            status                 = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'status')} THEN ${m.status || null} ELSE status END,
+            alamat_surat_menyurat  = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'alamat_surat_menyurat')} THEN ${m.alamat_surat_menyurat || null} ELSE alamat_surat_menyurat END,
+            alamat_tetap           = CASE WHEN ${Object.prototype.hasOwnProperty.call(m, 'alamat_tetap')} THEN ${m.alamat_tetap || null} ELSE alamat_tetap END
+          WHERE (no_ahli = ${m.no_ahli || null} AND ${m.no_ahli || null} IS NOT NULL)
+             OR (email = ${m.email || null} AND ${m.email || null} IS NOT NULL)
+          RETURNING *
+        `;
+
+        if (updatedRows.length === 0) {
           res.status(404).json({ success: false, error: 'Member record not found.' });
           return;
         }
-        res.status(200).json({ success: true, member: result[0] });
+
+        res.status(200).json({ success: true, member: updatedRows[0] });
         return;
       }
 
