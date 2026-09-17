@@ -159,11 +159,17 @@
                     </div>
 
                     <!-- Chart Section -->
-                    <div class="grid grid-cols-1 gap-6 mb-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <div class="chart-card">
                             <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Top Categories</h3>
                             <div class="relative h-64">
                                 <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Membership Status Distribution</h3>
+                            <div class="relative h-64">
+                                <canvas id="statusChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -465,6 +471,7 @@
     <script>
         const API_URL = '/api/members';
         let chartInstance = null;
+        let statusChartInstance = null;
 
         function checkAuth() {
             const isAuthenticated = sessionStorage.getItem('dpmm_auth');
@@ -553,29 +560,33 @@
                 let membersRes = await queryBackend('list', {});
                 let members = membersRes.members || [];
 
-                const total = summary ? summary.total : members.length;
-                const active = summary ? summary.active : members.filter(m => m.status === 'Aktif').length;
-                const ratio = total > 0 ? ((active / total) * 100).toFixed(1) : 0;
-
-                document.getElementById('kpi-total').textContent = total;
-                document.getElementById('kpi-active').textContent = active;
-                document.getElementById('kpi-ratio').textContent = `${ratio}%`;
-
-                let categories = summary ? summary.topCategories : null;
-                if (!categories && members.length) {
-                    const catMap = {};
-                    members.forEach(m => {
-                        const cat = m.kategori || 'Uncategorized';
-                        catMap[cat] = (catMap[cat] || 0) + 1;
-                    });
-                    categories = Object.keys(catMap).map(k => ({ kategori: k, count: catMap[k] }));
-                }
-
-                renderCategoryChart(categories || []);
+                renderAdvancedAnalytics(members, summary);
                 renderAnalyticsTable(members);
             } catch (err) {
                 console.error('Error fetching dashboard data:', err);
             }
+        }
+
+        function renderAdvancedAnalytics(members, summary) {
+            // 1. Sector Breakdown computation
+            const categoryMap = {};
+            members.forEach(m => {
+                let cat = m.kategori || 'Uncategorized';
+                categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+            });
+            const categories = Object.keys(categoryMap).map(k => ({ kategori: k, count: categoryMap[k] }));
+
+            // 2. Update UI KPI cards with deeper metrics
+            const total = summary ? summary.total : members.length;
+            const active = summary ? summary.active : members.filter(m => m.status === 'Aktif').length;
+            const ratio = total > 0 ? ((active / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpi-total').textContent = total;
+            document.getElementById('kpi-active').textContent = active;
+            document.getElementById('kpi-ratio').textContent = `${ratio}%`;
+
+            renderCategoryChart(categories);
+            renderStatusChart(members);
         }
 
         function renderCategoryChart(categories) {
@@ -603,6 +614,36 @@
                     scales: {
                         y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
                         x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderStatusChart(members) {
+            const activeCount = members.filter(m => m.status === 'Aktif').length;
+            const inactiveCount = members.length - activeCount;
+
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+
+            statusChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aktif', 'Tidak Aktif'],
+                    datasets: [{
+                        data: [activeCount, inactiveCount],
+                        backgroundColor: ['#00e599', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#f8fafc', font: { size: 12 } }
+                        }
                     }
                 }
             });
